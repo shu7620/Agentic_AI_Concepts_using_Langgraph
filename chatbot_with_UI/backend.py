@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage,BaseMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from typing import Annotated,TypedDict
+from langgraph.checkpoint.memory import InMemorySaver
 
 load_dotenv()
 
@@ -25,5 +26,7 @@ graph.add_node('chatNode',chatNode)
 graph.add_edge(START,'chatNode')
 graph.add_edge('chatNode',END)
 
-chatbot=graph.compile()
+checkpoint=InMemorySaver()
+
+chatbot=graph.compile(checkpointer=checkpoint)
 
