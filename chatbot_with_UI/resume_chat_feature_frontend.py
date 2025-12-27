@@ -1,3 +1,5 @@
+#********************************Basic code without delete chat feature*************************************************
+
 # import streamlit as st
 # from backend import chatbot
 # from langchain_core.messages import HumanMessage,AIMessage
@@ -138,6 +140,8 @@
 #     st.session_state['message_history'].append({'role':'assistant','content':ai_message})
 
 
+
+# ************************************Updated code with enhanced UI and delete chat feature*********************
 import streamlit as st
 from backend import chatbot
 from langchain_core.messages import HumanMessage, AIMessage
@@ -216,21 +220,67 @@ with st.sidebar:
     for thread, title in reversed(list(st.session_state['chat_threads'].items())):
         # Highlight active thread
         type_style = "primary" if st.session_state['thread_id'] == thread else "secondary"
-        
-        if st.button(f"💬 {title}", key=thread, use_container_width=True, type=type_style):
-            st.session_state['thread_id'] = thread
-            messages = load_conversation(thread)
-            
-            temp_message=[]
 
-            for mssg in messages:
-               if isinstance(mssg,HumanMessage):
-                role='user'
-               else:
-                role='assistant'
-               temp_message.append({'role':role,'content':mssg.content})
+        # Create two columns: one for the chat link, one for the delete button
+        col1, col2 = st.columns([0.8, 0.2])
+
+        with col1:
         
-            st.session_state['message_history']=temp_message
+               if st.button(f"💬 {title}", key=thread, use_container_width=True, type=type_style):
+                   st.session_state['thread_id'] = thread
+                   messages = load_conversation(thread)
+                   
+                   temp_message=[]
+       
+                   for mssg in messages:
+                      if isinstance(mssg,HumanMessage):
+                       role='user'
+                      else:
+                       role='assistant'
+                      temp_message.append({'role':role,'content':mssg.content})
+               
+                   st.session_state['message_history']=temp_message
+                   st.rerun()
+        with col2:
+            if st.button("🗑️", key=f"del_{thread}", help="Delete this chat"):
+                # 1. Remove from thread dictionary
+                del st.session_state['chat_threads'][thread]
+
+                # 2. Optional: If you want to clear the backend state (LangGraph)
+                # chatbot.update_state(config={'configurable': {'thread_id': thread}}, values={'messages': []})
+                # We overwrite the messages with an empty list for this specific thread_id
+                chatbot.update_state(
+                    config={"configurable": {"thread_id": thread}},
+                    values={"messages": []}, # Set messages to empty
+            )
+
+
+                # 3. If we deleted the active chat, reset the view
+                if st.session_state['thread_id'] == thread:
+                    # Clear the current UI messages immediately
+                    st.session_state['message_history'] = []
+                    # 3. Find a new chat to switch to
+                    remaining_threads = list(st.session_state['chat_threads'].keys())
+                    if remaining_threads:
+                        # Switch to the most recent remaining chat
+                        new_id = remaining_threads[-1]
+                        st.session_state['thread_id'] = new_id
+                        messages = load_conversation(new_id)
+                   
+                        temp_message=[]
+       
+                        for mssg in messages:
+                            if isinstance(mssg,HumanMessage):
+                               role='user'
+                            else:
+                               role='assistant'
+                            temp_message.append({'role':role,'content':mssg.content})
+               
+                        st.session_state['message_history']=temp_message
+                   
+                    else:
+                        reset_chat()
+                st.rerun() # Refresh UI after deletion
             
 
 # --- Main Chat UI ---
